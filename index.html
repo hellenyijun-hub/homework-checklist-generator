@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>作业清单生成器</title>
+<style>
+:root {
+color-scheme: light dark;
+--bg: #edf1ef;
+--panel: #f8faf9;
+--paper: #ffffff;
+--ink: #080a09;
+--muted: #2d3531;
+--line: #aeb9b3;
+--soft: #e5ebe8;
+--accent: #116149;
+--accent-strong: #0b4c38;
+--accent-soft: #dcece5;
+--warm: #d66a2e;
+--warm-soft: #f8e7dd;
+--shadow: 0 18px 44px rgba(22, 37, 30,.10);
+--focus: #176f55;
+}
+@media (prefers-color-scheme: dark) {
+:root {
+--bg: #121816;
+--panel: #19211e;
+--paper: #f7f8f7;
+--ink: #edf3f0;
+--muted: #b4c0ba;
+--line: #3b4942;
+--soft: #26312c;
+--accent: #69c39f;
+--accent-strong: #9ddbbe;
+--accent-soft: #263f35;
+--warm: #ef9a66;
+--warm-soft: #493126;
+--shadow: 0 18px 44px rgba(0, 0, 0,.28);
+--focus: #82d4b1;
+}
+}
+* { box-sizing: border-box;}
+[hidden] { display: none !important;}
+html { min-height: 100%;}
+body {
+margin: 0;
+min-height: 100%;
+background: var(--bg);
+color: var(--ink);
+font-family: "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+font-weight: 700;
+-webkit-font-smoothing: antialiased;
+text-rendering: optimizeLegibility;
+line-height: 1.55;
+}
+button, input, textarea, select { font: inherit;}
+button { cursor: pointer;}
+.app {
+width: min(1480px, 100%);
+margin: 0 auto;
+padding: 28px clamp(16px, 3vw, 42px) 56px;
+}
+.intro {
+display: flex;
+justify-content: space-between;
+gap: 24px;
+align-items: end;
+margin-bottom: 20px;
+}
+.intro h1 {
+margin: 0 0 7px;
+max-width: 900px;
+font-family: "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+font-size: clamp(28px, 3.5vw, 44px);
+line-height: 1.12;
+letter-spacing: -.025em;
+font-weight: 900;
+}
+.intro p {
+margin: 0;
+color: var(--muted);
+font-size: 15px;
+font-weight: 700;
+}
+.flow {
+display: flex;
+align-items: center;
+gap: 8px;
+flex-wrap: wrap;
+color: var(--muted);
+font-size: 13px;
+white-space: nowrap;
+}
+.flow strong {
+display: inline-grid;
+place-items: center;
+width: 27px;
+height: 27px;
+border-radius: 50%;
+color: var(--accent-strong);
+background: var(--accent-soft);
+font-weight: 900;
+}
+.layout {
+display: grid;
+grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
+gap: 22px;
+align-items: start;
+}
+.controls {
+position: sticky;
+top: 18px;
+background: var(--panel);
+border: 1px solid var(--line);
+border-radius: 18px;
+box-shadow: var(--shadow);
+overflow: hidden;
+}
+.control-block { padding: 21px;}
+.control-block +.control-block { border-top: 1px solid var(--line);}
+.block-title {
+margin: 0 0 14px;
+font-size: 17px;
+font-weight: 900;
+}
+label {
+display: block;
+margin-bottom: 12px;
+color: var(--muted);
+font-size: 13px;
+font-weight: 800;
+}
+input, textarea, select {
+width: 100%;
+margin-top: 7px;
+color: var(--ink);
+background: transparent;
+border: 1.5px solid var(--line);
+border-radius: 10px;
+outline: none;
+transition: border-color.15s, box-shadow.15s;
+}
+input, select { height: 43px; padding: 0 12px;}
+textarea {
+min-height: 260px;
+padding: 12px 13px;
+resize: vertical;
+font-size: 14px;
+line-height: 1.65;
+font-weight: 750;
+}
+input:focus, textarea:focus, select:focus {
+border-color: var(--focus);
+box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+textarea::placeholder { color: color-mix(in srgb, var(--muted) 74%, transparent);}
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px;}
+.hint {
+margin: -3px 0 14px;
+color: var(--muted);
+font-size: 12px;
+line-height: 1.55;
+}
+.primary {
+width: 100%;
+min-height: 48px;
+border: 0;
+border-radius: 10px;
+color: #fff;
+background: var(--accent-strong);
+font-weight: 900;
+letter-spacing:.02em;
+box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.primary:hover { filter: brightness(1.08);}
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px;}
+.secondary,.quiet {
+min-height: 42px;
+border: 1.5px solid var(--line);
+border-radius: 9px;
+background: transparent;
+color: var(--ink);
+font-weight: 850;
+}
+.secondary:hover,.quiet:hover { border-color: var(--accent); color: var(--accent-strong);}
+.quiet { color: var(--muted);}
+.download-note {
+margin: 11px 0 0;
+color: var(--muted);
+font-size: 12px;
+font-weight: 750;
+}
+.workspace { min-width: 0;}
+.workspace-head {
+display: flex;
+justify-content: space-between;
+gap: 12px;
+align-items: center;
+margin: 2px 0 12px;
+}
+.workspace-head h2 { margin: 0; font-size: 17px; font-weight: 900;}
+.status {
+padding: 6px 9px;
+border-radius: 8px;
+background: var(--accent-soft);
+color: var(--accent-strong);
+font-size: 12px;
+font-weight: 900;
+}
+.empty {
+min-height: 520px;
+display: grid;
+place-items: center;
+padding: 40px;
+border: 1.5px dashed var(--line);
+border-radius: 15px;
+text-align: center;
+color: var(--muted);
+background: color-mix(in srgb, var(--panel) 60%, transparent);
+}
+.empty svg { width: 52px; height: 52px; color: var(--accent); margin-bottom: 12px;}
+.empty strong { display: block; color: var(--ink); font-size: 18px; margin-bottom: 5px;}
+.pages { display: grid; gap: 22px; justify-items: center;}
+.sheet {
+width: min(100%, 794px);
+min-height: 1123px;
+padding: 44px 48px 40px;
+background: var(--paper);
+color: #000;
+font-family: "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+font-weight: 800;
+box-shadow: var(--shadow);
+position: relative;
+overflow: hidden;
+-webkit-print-color-adjust: exact;
+print-color-adjust: exact;
+}
+.sheet::before {
+content: "";
+position: absolute;
+inset: 0 0 auto 0;
+height: 9px;
+background: #116149;
+}
+.page-number {
+position: absolute;
+right: 46px;
+bottom: 22px;
+color: #202321;
+font-size: 11px;
+font-weight: 800;
+}
+.paper-head {
+display: grid;
+grid-template-columns: 1fr auto;
+gap: 20px;
+align-items: end;
+padding-bottom: 14px;
+border-bottom: 2.5px solid #17211d;
+margin-bottom: 17px;
+}
+.paper-head h3 {
+margin: 0;
+font-family: inherit;
+font-size: 27px;
+line-height: 1.2;
+font-weight: 900;
+letter-spacing: -.02em;
+outline: none;
+}
+.paper-meta {
+display: flex;
+gap: 18px;
+font-size: 13px;
+font-weight: 800;
+color: #000;
+}
+.fill-line {
+display: inline-block;
+width: 88px;
+margin-left: 4px;
+border-bottom: 1.5px solid #59635e;
+transform: translateY(-2px);
+}
+.subject { margin: 0 0 15px; break-inside: avoid;}
+.subject-title {
+display: flex;
+align-items: center;
+gap: 9px;
+margin: 0 0 7px;
+color: #000;
+font-size: 18px;
+line-height: 1.35;
+font-weight: 900;
+outline: none;
+}
+.subject-title::before {
+content: "";
+width: 6px;
+height: 20px;
+border-radius: 2px;
+background: #d66a2e;
+flex: 0 0 auto;
+}
+.subgroup {
+margin: 9px 0 5px 34px;
+color: #000;
+font-size: 13px;
+font-weight: 900;
+}
+.task {
+display: grid;
+grid-template-columns: 23px 1fr;
+gap: 9px;
+align-items: start;
+padding: 5px 3px 5px 2px;
+border-bottom: 1px dotted #7d827f;
+font-size: 15px;
+line-height: 1.5;
+font-weight: 800;
+break-inside: avoid;
+}
+.box {
+width: 17px;
+height: 17px;
+margin-top: 2px;
+border: 2.2px solid #17211d;
+border-radius: 2px;
+}
+.task-text { outline: none; min-width: 0;}
+[contenteditable="true"]:focus {
+box-shadow: inset 0 -2px #d66a2e;
+background: #fff5ed;
+}
+.paper-note {
+margin: 7px 0 4px 31px;
+padding: 6px 9px;
+color: #000;
+background: #edf0ee;
+border-left: 4px solid #17211d;
+border-radius: 0 3px 3px 0;
+font-size: 13px;
+font-weight: 800;
+}
+.sign-row {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 22px;
+margin-top: 20px;
+padding-top: 13px;
+border-top: 2px solid #17211d;
+color: #222b27;
+font-size: 13px;
+font-weight: 850;
+}
+.sign-row span { display: inline-block; min-width: 130px; border-bottom: 1px solid #4d5853; height: 20px;}
+.toast {
+position: fixed;
+left: 50%;
+bottom: 24px;
+transform: translate(-50%, 16px);
+padding: 10px 16px;
+border-radius: 9px;
+color: #fff;
+background: #17211d;
+box-shadow: var(--shadow);
+opacity: 0;
+pointer-events: none;
+transition:.2s ease;
+z-index: 20;
+font-size: 13px;
+font-weight: 800;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0);}
+@media (max-width: 900px) {
+.app { padding-top: 20px;}
+.intro { align-items: start; flex-direction: column;}
+.layout { grid-template-columns: 1fr;}
+.controls { position: static;}
+.sheet { min-height: auto; padding: 35px 28px 44px;}
+.paper-head { grid-template-columns: 1fr; gap: 9px;}
+.paper-meta { justify-content: space-between;}
+}
+@media (max-width: 520px) {
+.intro h1 { font-size: 30px;}
+.row,.actions { grid-template-columns: 1fr;}
+textarea { min-height: 220px;}
+.sheet { width: 100%; padding: 31px 19px 42px;}
+.paper-head h3 { font-size: 23px;}
+.paper-meta { flex-wrap: wrap; gap: 8px;}
+.task { font-size: 14px; grid-template-columns: 21px 1fr;}
+.sign-row { grid-template-columns: 1fr; gap: 12px;}
+}
+@media print {
+:root { color-scheme: light;}
+body { background: #fff; color: #000; font-weight: 800;}
+.intro,.controls,.workspace-head,.empty,.toast { display: none!important;}
+.app { width: auto; padding: 0;}
+.layout { display: block;}
+.pages { display: block;}
+.sheet {
+width: 210mm;
+height: 297mm;
+min-height: 0;
+padding: 12mm 13mm 11mm;
+box-shadow: none;
+page-break-after: always;
+}
+.sheet:last-child { page-break-after: auto;}
+.sheet::before { height: 3mm;}
+.page-number { right: 13mm; bottom: 6mm;}
+}
+@page { size: A4 portrait; margin: 0;}
+</style>
+</head>
+<body>
+<main class="app">
+<section class="intro">
+<div>
+<h1>把群消息，变成孩子看得清的作业清单</h1>
+<p>粘贴多科作业原文，自动分科、拆项并压入 A4 页面；清单采用深色粗体，打印不发虚。</p>
+</div>
+<div class="flow" aria-label="使用步骤">
+<strong>1</strong> 粘贴 <span>→</span> <strong>2</strong> 生成 <span>→</span> <strong>3</strong> 下载
+</div>
+</section>
+
+<div class="layout">
+<aside class="controls" aria-label="清单设置">
+<section class="control-block">
+<h2 class="block-title">粘贴老师发的原文</h2>
+<label>
+作业消息
+<textarea id="rawInput" placeholder="可以一次粘贴多科，例如：&#10;&#10;本周末语文作业：&#10;1、完成第二单元练习&#10;2、背诵课文并签字&#10;&#10;📚课外数学班课后作业&#10;1️⃣ 完成本讲资料册&#10;2️⃣ 试卷第五套"></textarea>
+</label>
+<p class="hint">保留老师原话即可。系统会识别“语文 / 数学 / 英语 / 课外班”等标题和编号。</p>
+<div class="row">
+<label>
+清单标题
+<input id="titleInput" value="周末作业清单" maxlength="40" />
+</label>
+<label>
+A4 页数
+<select id="pageTarget">
+<option value="1">1 页</option>
+<option value="2" selected>2 页</option>
+<option value="3">3 页</option>
+<option value="4">4 页</option>
+</select>
+</label>
+</div>
+<button class="primary" id="generateBtn" type="button">生成纯黑粗体清单</button>
+</section>
+
+<section class="control-block">
+<h2 class="block-title">导出</h2>
+<div class="actions">
+<button class="secondary" id="downloadBtn" type="button" disabled>下载 Word</button>
+<button class="secondary" id="copyBtn" type="button" disabled>复制清单</button>
+</div>
+<p class="download-note">下载后可直接打印；需要 PDF 时，在 Word 中选择“另存为 PDF”。预览里的文字可直接点选修改。</p>
+<button class="quiet" id="clearBtn" type="button" style="width:100%;margin-top:12px;">清空重来</button>
+</section>
+</aside>
+
+<section class="workspace" aria-live="polite">
+<div class="workspace-head">
+<h2>打印预览 · 纯黑粗体</h2>
+<span class="status" id="status">等待粘贴内容</span>
+</div>
+<div class="empty" id="emptyState">
+<div>
+<svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+<path d="M17 8h23l9 9v39H17z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+<path d="M40 8v10h9M24 29h18M24 38h18M24 47h11" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+</svg>
+<strong>粘贴作业消息后生成</strong>
+<span>不同科目的消息可以一起放进输入框。</span>
+</div>
+</div>
+<div class="pages" id="pages" hidden></div>
+</section>
+</div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+var rawInput = document.getElementById('rawInput');
+var titleInput = document.getElementById('titleInput');
+var pageTarget = document.getElementById('pageTarget');
+var pagesEl = document.getElementById('pages');
+var emptyState = document.getElementById('emptyState');
+var statusEl = document.getElementById('status');
+var downloadBtn = document.getElementById('downloadBtn');
+var copyBtn = document.getElementById('copyBtn');
+var toastEl = document.getElementById('toast');
+var currentData = null;
+var toastTimer;
+
+var subjectRules = [
+[/课外.{0,4}数学|数学.{0,4}课外|数学班/, '课外数学班'],
+[/课外.{0,4}英语|英语.{0,4}课外|英语班/, '课外英语班'],
+[/课外.{0,4}语文|语文.{0,4}课外|语文班/, '课外语文班'],
+[/语文/, '学校语文'], [/数学/, '学校数学'], [/英语/, '学校英语'],
+[/物理/, '学校物理'], [/化学/, '学校化学'], [/生物/, '学校生物'],
+[/历史/, '学校历史'], [/地理/, '学校地理'], [/道法|政治/, '道德与法治'],
+[/体育/, '体育'], [/美术/, '美术'], [/音乐/, '音乐']
+];
+
+function cleanLine(line) {
+return line.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/^\s+|\s+$/g, '');
+}
+
+function stripMarker(line) {
+return line
+.replace(/^\s*[（(]?\d{1,2}[）).、．:]\s*/, '')
+.replace(/^\s*[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]\s*/, '')
+.replace(/^\s*[0-9]?[\uFE0F]?\u20E3\s*/, '')
+.replace(/^\s*[一二三四五六七八九十]+[、.．]\s*/, '')
+.replace(/^\s*[-—•·]\s*/, '')
+.trim();
+}
+
+function hasMarker(line) {
+return /^\s*(?:[（(]?\d{1,2}[）).、．:]|[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]|[0-9]?[\uFE0F]?\u20E3|[一二三四五六七八九十]+[、.．]|[-—•·])/.test(line);
+}
+
+function detectSubject(line) {
+for (var i = 0; i < subjectRules.length; i++) {
+if (subjectRules[i][0].test(line)) return subjectRules[i][1];
+}
+return null;
+}
+
+function isSubjectHeader(line) {
+var subject = detectSubject(line);
+if (!subject) return false;
+var headerWord = /作业|课后|任务|清单|周末|练习/.test(line);
+return headerWord &&!hasMarker(line) && line.length <= 36;
+}
+
+function isGroupHeader(line) {
+var text = line.replace(/[：:（）()]/g, '').trim();
+return /^(订正|贴贴|整理|背诵|朗读|听写|默写|家长签字|复习|预习|书面作业|口头作业)$/.test(text);
+}
+
+function normalizeSubjectTitle(line, detected) {
+if (/课外/.test(detected)) return detected;
+if (/学校/.test(detected)) return detected;
+return line.replace(/[\[\]：:📚]/g, '').replace(/本周末|周末|课后|作业|任务/g, '').trim() || detected;
+}
+
+function parseText(text) {
+var lines = text.split(/\r?\n/).map(cleanLine).filter(Boolean);
+var sections = [];
+var current = null;
+var group = '';
+
+function ensureSection(name) {
+var found = null;
+for (var i = 0; i < sections.length; i++) {
+if (sections[i].name === name) { found = sections[i]; break;}
+}
+if (!found) {
+found = { name: name, items: [], notes: []};
+sections.push(found);
+}
+current = found;
+group = '';
+}
+
+for (var i = 0; i < lines.length; i++) {
+var line = lines[i];
+if (isSubjectHeader(line)) {
+var detected = detectSubject(line) || '其他作业';
+ensureSection(normalizeSubjectTitle(line, detected));
+continue;
+}
+if (!current) ensureSection(detectSubject(line) || '其他作业');
+if (isGroupHeader(line)) {
+group = line.replace(/[：:（）()]/g, '').trim();
+continue;
+}
+if (/^(注|备注|提醒|说明)[：:]/.test(line)) {
+current.notes.push(line);
+continue;
+}
+var cleaned = stripMarker(line);
+if (!cleaned) continue;
+
+if (hasMarker(line) ||!current.items.length || cleaned.length > 9) {
+current.items.push({ text: cleaned, group: group});
+} else {
+current.items[current.items.length - 1].text += ' ' + cleaned;
+}
+}
+
+sections = sections.filter(function (section) {
+return section.items.length || section.notes.length;
+});
+return sections;
+}
+
+function itemWeight(text) {
+return 1 + Math.max(0, Math.ceil(text.length / 38) - 1) *.75;
+}
+
+function paginate(sections, target) {
+var total = 0;
+sections.forEach(function (s) {
+total += 2.2 + s.notes.length *.8;
+var lastGroup = '';
+s.items.forEach(function (item) {
+if (item.group && item.group!== lastGroup) total +=.55;
+lastGroup = item.group;
+total += itemWeight(item.text);
+});
+});
+var capacity = Math.max(10, total / target + 1.4);
+var pages = [[]];
+var pageIndex = 0;
+var used = 0;
+
+sections.forEach(function (section) {
+var piece = { name: section.name, items: [], notes: [], continued: false};
+var base = 2.2;
+if (used + base > capacity && pages[pageIndex].length) {
+pages.push([]); pageIndex++; used = 0;
+}
+pages[pageIndex].push(piece);
+used += base;
+var lastGroup = '';
+
+section.items.forEach(function (item) {
+var extra = itemWeight(item.text) + (item.group && item.group!== lastGroup?.55: 0);
+if (used + extra > capacity && pageIndex < target - 1 && piece.items.length) {
+pages.push([]); pageIndex++; used = 0;
+piece = { name: section.name, items: [], notes: [], continued: true};
+pages[pageIndex].push(piece);
+used += base;
+lastGroup = '';
+extra = itemWeight(item.text) + (item.group?.55: 0);
+}
+piece.items.push(item);
+used += extra;
+lastGroup = item.group;
+});
+
+section.notes.forEach(function (note) {
+if (used +.8 > capacity && pageIndex < target - 1) {
+pages.push([]); pageIndex++; used = 0;
+piece = { name: section.name, items: [], notes: [], continued: true};
+pages[pageIndex].push(piece);
+used += base;
+}
+piece.notes.push(note);
+used +=.8;
+});
+});
+
+while (pages.length > target) {
+var tail = pages.pop();
+pages[pages.length - 1] = pages[pages.length - 1].concat(tail);
+}
+return pages;
+}
+
+function escapeHtml(value) {
+return value.replace(/[&<>"]/g, function (char) {
+return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[char];
+});
+}
+
+function buildPages(sections, target, title) {
+var pages = paginate(sections, target);
+var totalItems = sections.reduce(function (sum, section) { return sum + section.items.length;}, 0);
+pagesEl.innerHTML = pages.map(function (page, pageNo) {
+var sectionsHtml = page.map(function (section) {
+var lastGroup = '';
+var itemHtml = section.items.map(function (item) {
+var groupHtml = '';
+if (item.group && item.group!== lastGroup) {
+groupHtml = '<div class="subgroup">' + escapeHtml(item.group) + '</div>';
+}
+lastGroup = item.group;
+return groupHtml + '<div class="task"><span class="box" aria-hidden="true"></span><span class="task-text" contenteditable="true">' + escapeHtml(item.text) + '</span></div>';
+}).join('');
+var notesHtml = section.notes.map(function (note) {
+return '<div class="paper-note" contenteditable="true">' + escapeHtml(note) + '</div>';
+}).join('');
+return '<section class="subject"><h4 class="subject-title" contenteditable="true">' + escapeHtml(section.name + (section.continued? '（续）': '')) + '</h4>' + itemHtml + notesHtml + '</section>';
+}).join('');
+var sign = pageNo === pages.length - 1? '<div class="sign-row"><div>孩子确认：<span></span></div><div>家长签字：<span></span></div></div>': '';
+return '<article class="sheet"><header class="paper-head"><h3 contenteditable="true">' + escapeHtml(title) + '</h3><div class="paper-meta"><div>姓名<span class="fill-line"></span></div><div>日期<span class="fill-line"></span></div></div></header>' + sectionsHtml + sign + '<span class="page-number">' + (pageNo + 1) + ' / ' + pages.length + '</span></article>';
+}).join('');
+return { pageCount: pages.length, itemCount: totalItems};
+}
+
+function generate() {
+var raw = rawInput.value.trim();
+if (!raw) {
+showToast('请先粘贴作业消息');
+rawInput.focus();
+return;
+}
+var sections = parseText(raw);
+if (!sections.length) {
+showToast('暂时没有识别到作业内容');
+return;
+}
+var title = titleInput.value.trim() || '作业清单';
+var result = buildPages(sections, Number(pageTarget.value), title);
+currentData = sections;
+emptyState.hidden = true;
+pagesEl.hidden = false;
+statusEl.textContent = result.itemCount + ' 项 · ' + result.pageCount + ' 页 A4';
+downloadBtn.disabled = false;
+copyBtn.disabled = false;
+if (window.innerWidth < 901) pagesEl.scrollIntoView({ behavior: 'smooth', block: 'start'});
+}
+
+function getPlainText() {
+if (!currentData) return '';
+var lines = [titleInput.value.trim() || '作业清单', ''];
+var sheets = pagesEl.querySelectorAll('.sheet');
+sheets.forEach(function (sheet) {
+var subjects = sheet.querySelectorAll('.subject');
+subjects.forEach(function (subject) {
+var title = subject.querySelector('.subject-title');
+lines.push('');
+var children = subject.children;
+for (var i = 1; i < children.length; i++) {
+var child = children[i];
+if (child.classList.contains('subgroup')) lines.push(child.textContent.trim());
+if (child.classList.contains('task')) lines.push('□ ' + child.querySelector('.task-text').textContent.trim());
+if (child.classList.contains('paper-note')) lines.push(child.textContent.trim());
+}
+lines.push('');
+});
+});
+lines.push('孩子确认：____________ 家长签字：____________');
+return lines.join('\n');
+}
+
+function copyText() {
+var text = getPlainText();
+if (!text) return;
+if (navigator.clipboard && navigator.clipboard.writeText) {
+navigator.clipboard.writeText(text).then(function () { showToast('清单已复制');}, fallbackCopy);
+} else fallbackCopy();
+function fallbackCopy() {
+var helper = document.createElement('textarea');
+helper.value = text;
+helper.style.position = 'fixed';
+helper.style.opacity = '0';
+document.body.appendChild(helper);
+helper.select();
+document.execCommand('copy');
+helper.remove();
+showToast('清单已复制');
+}
+}
+
+function downloadWord() {
+if (!currentData) return;
+var title = titleInput.value.trim() || '作业清单';
+var wordCss = '@page{size:A4 portrait;margin:12mm 13mm 11mm}body{font-family:"Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;color:#000;font-weight:800;margin:0}.sheet{page-break-after:always;color:#000}.sheet:last-child{page-break-after:auto}.paper-head{border-bottom:2px solid #000;margin-bottom:14px;padding-bottom:10px}.paper-head h3{font-family:inherit;font-size:22pt;margin:0;font-weight:900}.paper-meta{font-size:10.5pt;margin-top:7px;font-weight:800;color:#000}.fill-line{display:inline-block;width:75px;border-bottom:1px solid #000}.subject{margin:0 0 10px}.subject-title{font-size:14pt;color:#000;margin:0 0 5px;font-weight:900;border-left:5px solid #d66a2e;padding-left:8px}.subgroup{font-size:10.5pt;margin:7px 0 3px 25px;color:#000;font-weight:900}.task{font-size:11.5pt;line-height:1.5;border-bottom:1px dotted #777;padding:3px 0;font-weight:800}.box{display:inline-block;width:13px;height:13px;border:2px solid #000;margin:0 9px 0 1px;vertical-align:-2px}.paper-note{font-size:10.5pt;color:#000;background:#edf0ee;border-left:4px solid #000;padding:5px 7px;margin:5px 0 4px 22px;font-weight:800}.sign-row{border-top:2px solid #000;margin-top:14px;padding-top:10px;font-size:10.5pt;font-weight:800}.page-number{display:block;text-align:right;color:#000;font-size:9pt;margin-top:8px;font-weight:800}';
+var clone = pagesEl.cloneNode(true);
+var editable = clone.querySelectorAll('[contenteditable]');
+editable.forEach(function (node) { node.removeAttribute('contenteditable');});
+var html = '<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title><style>' + wordCss + '</style></head><body>' + clone.innerHTML + '</body></html>';
+var blob = new Blob(['\ufeff', html], { type: 'application/msword'});
+var url = URL.createObjectURL(blob);
+var link = document.createElement('a');
+link.href = url;
+link.download = title.replace(/[\\/:*?"<>|]/g, '-') + '.doc';
+document.body.appendChild(link);
+link.click();
+link.remove();
+setTimeout(function () { URL.revokeObjectURL(url);}, 1000);
+showToast('Word 已下载');
+}
+
+function clearAll() {
+rawInput.value = '';
+currentData = null;
+pagesEl.innerHTML = '';
+pagesEl.hidden = true;
+emptyState.hidden = false;
+statusEl.textContent = '等待粘贴内容';
+downloadBtn.disabled = true;
+copyBtn.disabled = true;
+rawInput.focus();
+}
+
+function showToast(message) {
+clearTimeout(toastTimer);
+toastEl.textContent = message;
+toastEl.classList.add('show');
+toastTimer = setTimeout(function () { toastEl.classList.remove('show');}, 1800);
+}
+
+document.getElementById('generateBtn').addEventListener('click', generate);
+document.getElementById('clearBtn').addEventListener('click', clearAll);
+downloadBtn.addEventListener('click', downloadWord);
+copyBtn.addEventListener('click', copyText);
+pageTarget.addEventListener('change', function () { if (currentData) generate();});
+})();
+</script>
+</body>
+</html>
